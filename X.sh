@@ -592,7 +592,14 @@ function installQuestions() {
 			HMAC_ALG="SHA512"
 			;;
 		esac
-		
+		echo ""
+		echo "You can add an additional layer of security to the control channel with tls-auth and tls-crypt"
+		echo "tls-auth authenticates the packets, while tls-crypt authenticate and encrypt them."
+		echo "   1) tls-crypt (recommended)"
+		echo "   2) tls-auth"
+		until [[ $TLS_SIG =~ [1-2] ]]; do
+			read -rp "Control channel additional security mechanism [1-2]: " -e -i 1 TLS_SIG
+		done
 	fi
 	echo ""
 	echo "Okay, that was all I needed. We are ready to setup your OpenVPN server now."
@@ -1112,22 +1119,36 @@ function newClient() {
 		TLS_SIG="2"
 	fi
 
-	newclient() {
-			# gerar client.ovpn
-			cp /etc/openvpn/client-common.txt ~/$1.ovpn
-	echo "<ca>" >> ~/$1.ovpn
-	cat /etc/openvpn/easy-rsa/pki/ca.crt >> ~/$1.ovpn
-	echo "</ca>" >> ~/$1.ovpn
-	echo "<cert>" >> ~/$1.ovpn
-	sed -ne '/BEGIN CERTIFICATE/,$ p' /etc/openvpn/easy-rsa/pki/issued/$1.crt >> ~/$1.ovpn
-	echo "</cert>" >> ~/$1.ovpn
-	echo "<key>" >> ~/$1.ovpn
-	cat /etc/openvpn/easy-rsa/pki/private/$1.key >> ~/$1.ovpn
-	echo "</key>" >> ~/$1.ovpn
-	echo "<tls-auth>" >> ~/$1.ovpn
-	sed -ne '/BEGIN OpenVPN Static key/,$ p' /etc/openvpn/ta.key >> ~/$1.ovpn
-	echo "</tls-auth>" >> ~/$1.ovpn
-		}
+	# Generates the custom client.ovpn
+	cp /etc/openvpn/client-template.txt "$homeDir/$CLIENT.ovpn"
+	{
+		echo "<ca>"
+		cat "/etc/openvpn/easy-rsa/pki/ca.crt"
+		echo "</ca>"
+
+		echo "<cert>"
+		awk '/BEGIN/,/END CERTIFICATE/' "/etc/openvpn/easy-rsa/pki/issued/$CLIENT.crt"
+		echo "</cert>"
+
+		echo "<key>"
+		cat "/etc/openvpn/easy-rsa/pki/private/$CLIENT.key"
+		echo "</key>"
+
+		case $TLS_SIG in
+		1)
+			echo "<tls-crypt>"
+			cat /etc/openvpn/tls-crypt.key
+			echo "</tls-crypt>"
+			;;
+		2)
+			echo "key-direction 1"
+			echo "<tls-auth>"
+			cat /etc/openvpn/tls-auth.key
+			echo "</tls-auth>"
+			;;
+		esac
+	} >>"$homeDir/$CLIENT.ovpn"
+
 	echo ""
 	echo "The configuration file has been written to $homeDir/$CLIENT.ovpn."
 	echo "Download the .ovpn file and import it in your OpenVPN client."
