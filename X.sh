@@ -1120,34 +1120,34 @@ function newClient() {
 	fi
 
 	# Generates the custom client.ovpn
-	cp /etc/openvpn/client-common.txt "$homeDir/$CLIENT.ovpn"
+	cp /etc/openvpn/client-common.txt  ~/$1.ovpn
 	{
-		echo "<ca>"
-		cat "/etc/openvpn/easy-rsa/pki/ca.crt"
-		echo "</ca>"
+		echo "<ca>" >> ~/$1.ovpn
+		cat "/etc/openvpn/easy-rsa/pki/ca.crt" >> ~/$1.ovpn
+		echo "</ca>" >> ~/$1.ovpn
 
-		echo "<cert>"
-		awk '/BEGIN/,/END CERTIFICATE/' "/etc/openvpn/easy-rsa/pki/issued/$CLIENT.crt"
-		echo "</cert>"
+		echo "<cert>" >> ~/$1.ovpn
+		awk '/BEGIN/,/END CERTIFICATE/' "/etc/openvpn/easy-rsa/pki/issued/$CLIENT.crt" >> ~/$1.ovpn
+		echo "</cert>" >> ~/$1.ovpn
 
-		echo "<key>"
-		cat "/etc/openvpn/easy-rsa/pki/private/$CLIENT.key"
-		echo "</key>"
+		echo "<key>" >> ~/$1.ovpn
+		cat "/etc/openvpn/easy-rsa/pki/private/$CLIENT.key" >> ~/$1.ovpn
+		echo "</key>" >> ~/$1.ovpn
 
 		case $TLS_SIG in
 		1)
-			echo "<tls-crypt>"
-			cat /etc/openvpn/tls-crypt.key
-			echo "</tls-crypt>"
+			echo "<tls-crypt>" >> ~/$1.ovpn
+			cat /etc/openvpn/tls-crypt.key >> ~/$1.ovpn
+			echo "</tls-crypt>" >> ~/$1.ovpn
 			;;
 		2)
-			echo "key-direction 1"
-			echo "<tls-auth>"
-			cat /etc/openvpn/tls-auth.key
-			echo "</tls-auth>"
+			echo "key-direction 1" >> ~/$1.ovpn
+			echo "<tls-auth>" >> ~/$1.ovpn
+			cat /etc/openvpn/tls-auth.key >> ~/$1.ovpn
+			echo "</tls-auth>" >> ~/$1.ovpn
 			;;
 		esac
-	} >>"$homeDir/$CLIENT.ovpn"
+	} >>"~/$1.ovpn"
 
 	echo ""
 	echo "The configuration file has been written to $homeDir/$CLIENT.ovpn."
