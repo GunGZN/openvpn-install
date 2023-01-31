@@ -592,14 +592,7 @@ function installQuestions() {
 			HMAC_ALG="SHA512"
 			;;
 		esac
-		echo ""
-		echo "You can add an additional layer of security to the control channel with tls-auth and tls-crypt"
-		echo "tls-auth authenticates the packets, while tls-crypt authenticate and encrypt them."
-		echo "   1) tls-crypt (recommended)"
-		echo "   2) tls-auth"
-		until [[ $TLS_SIG =~ [1-2] ]]; do
-			read -rp "Control channel additional security mechanism [1-2]: " -e -i 1 TLS_SIG
-		done
+		
 	fi
 	echo ""
 	echo "Okay, that was all I needed. We are ready to setup your OpenVPN server now."
@@ -1119,36 +1112,22 @@ function newClient() {
 		TLS_SIG="2"
 	fi
 
-	# Generates the custom client.ovpn
-	cp /etc/openvpn/client-common.txt  ~/$1.ovpn
-	{
-		echo "<ca>" >> ~/$1.ovpn
-		cat "/etc/openvpn/easy-rsa/pki/ca.crt" >> ~/$1.ovpn
-		echo "</ca>" >> ~/$1.ovpn
-
-		echo "<cert>" >> ~/$1.ovpn
-		awk '/BEGIN/,/END CERTIFICATE/' "/etc/openvpn/easy-rsa/pki/issued/$CLIENT.crt" >> ~/$1.ovpn
-		echo "</cert>" >> ~/$1.ovpn
-
-		echo "<key>" >> ~/$1.ovpn
-		cat "/etc/openvpn/easy-rsa/pki/private/$CLIENT.key" >> ~/$1.ovpn
-		echo "</key>" >> ~/$1.ovpn
-
-		case $TLS_SIG in
-		1)
-			echo "<tls-crypt>" >> ~/$1.ovpn
-			cat /etc/openvpn/tls-crypt.key >> ~/$1.ovpn
-			echo "</tls-crypt>" >> ~/$1.ovpn
-			;;
-		2)
-			echo "key-direction 1" >> ~/$1.ovpn
-			echo "<tls-auth>" >> ~/$1.ovpn
-			cat /etc/openvpn/tls-auth.key >> ~/$1.ovpn
-			echo "</tls-auth>" >> ~/$1.ovpn
-			;;
-		esac
-	} >>"~/$1.ovpn"
-
+	newclient() {
+			# gerar client.ovpn
+			cp /etc/openvpn/client-common.txt ~/$1.ovpn
+	echo "<ca>" >> ~/$1.ovpn
+	cat /etc/openvpn/easy-rsa/pki/ca.crt >> ~/$1.ovpn
+	echo "</ca>" >> ~/$1.ovpn
+	echo "<cert>" >> ~/$1.ovpn
+	sed -ne '/BEGIN CERTIFICATE/,$ p' /etc/openvpn/easy-rsa/pki/issued/$1.crt >> ~/$1.ovpn
+	echo "</cert>" >> ~/$1.ovpn
+	echo "<key>" >> ~/$1.ovpn
+	cat /etc/openvpn/easy-rsa/pki/private/$1.key >> ~/$1.ovpn
+	echo "</key>" >> ~/$1.ovpn
+	echo "<tls-auth>" >> ~/$1.ovpn
+	sed -ne '/BEGIN OpenVPN Static key/,$ p' /etc/openvpn/ta.key >> ~/$1.ovpn
+	echo "</tls-auth>" >> ~/$1.ovpn
+		}
 	echo ""
 	echo "The configuration file has been written to $homeDir/$CLIENT.ovpn."
 	echo "Download the .ovpn file and import it in your OpenVPN client."
